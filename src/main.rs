@@ -14,7 +14,7 @@ use piston::window::WindowSettings;
 
 pub struct App<'a> {
     gl: GlGraphics, // OpenGL drawing backend.
-    rotation: f64,  // Rotation for the square.
+    //rotation: f64,  // Rotation for the square.
     width: usize,
     height: usize,
     epoch: u128,
@@ -23,40 +23,51 @@ pub struct App<'a> {
 
 impl App<'_> {
     fn render(&mut self, args: &RenderArgs) {
-
-        for r in 0..self.height {
-            for c in 0..self.width {
-                print!("{} ", self.grid[r][c]);
-            }
-            println!();
-        }
-
         use graphics::*;
 
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
         const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+        const SIZE: f64 = 5.0;
+        const PADDING: f64 = 5.0;
+        const START_X: f64 = 0.0;
+        const START_Y: f64 = 0.0;
 
-        let square = rectangle::square(0.0, 0.0, 50.0);
-        let rotation = self.rotation;
-        let (x, y) = (args.window_size[0] / 2.0, args.window_size[1] / 2.0);
+        let mut square: [f64; 4] = rectangle::square(START_X, START_Y, SIZE);
+        //let rotation = self.rotation;
+        //let (x, y) = (args.window_size[0] / 2.0, args.window_size[1] / 2.0);
 
-        self.gl.draw(args.viewport(), |c, gl| {
+        self.gl.draw(args.viewport(), |context, gl| {
             clear(GREEN, gl);
 
-            let transform = c
-                .transform
-                .trans(x, y)
-                .rot_rad(rotation)
-                .trans(-25.0, -25.0);
+            for row in 0..self.height {
+                for col in 0..self.width {
+                    //print!("{} ", self.grid[r][c]);
 
-            // Draw a box rotating around the middle of the screen.
-            rectangle(RED, square, transform, gl);
+                    square = rectangle::square(START_X + col as f64 * SIZE + col as f64 * PADDING, START_Y + row as f64 * SIZE + row as f64 * PADDING, SIZE);
+
+                    let transform = context
+                        .transform
+                        .trans(0.0, 0.0);
+                        //.trans(x, y);
+                        //.rot_rad(rotation)
+                        //.trans(-25.0, -25.0);
+
+                    if self.grid[row][col] {
+                        rectangle(RED, square, transform, gl);
+                    }
+                    else {
+                        rectangle(BLACK, square, transform, gl);
+                    }
+                }
+                //println!();
+            }
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
         // Rotate 2 radians per second.
-        self.rotation += 2.0 * args.dt;
+        //self.rotation += 2.0 * args.dt;
         self.epoch += 1;
     }
 }
@@ -103,7 +114,7 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     // Create a Glutin window.
-    let mut window: Window = WindowSettings::new("Game of Life", [width as u32, height as u32])
+    let mut window: Window = WindowSettings::new("Game of Life", [width as u32 * 2, height as u32 * 2])
         .graphics_api(opengl)
         .exit_on_esc(true)
         .build()
@@ -111,14 +122,19 @@ fn main() {
 
     let mut grid_raw: Vec<bool> = vec![false; width * height];
     let mut grid_base: Vec<&mut [bool]> = grid_raw.as_mut_slice().chunks_mut(width).collect();
+    let grid: &mut [&mut [bool]] = grid_base.as_mut_slice();
+
+    grid[0][0] = true;
+    grid[1][1] = true;
+    grid[2][2] = true;
 
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        rotation: 0.0,
+        //rotation: 0.0,
         width: width,
         height: height,
         epoch: 0,
-        grid: grid_base.as_mut_slice()
+        grid: grid
     };
 
     let mut events = Events::new(EventSettings::new());
